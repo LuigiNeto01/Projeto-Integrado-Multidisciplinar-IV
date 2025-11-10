@@ -1,0 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Opcional: reset mínimo para o body */
+html, body, #root { height: 100%; }
+body { margin: 0; }

@@ -1,0 +1,50 @@
+# Root gitignore combining .NET + Node + env files
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.env
+*.env
+!*.env.example
+
+# Visual Studio / .NET
+.vs/
+*.user
+*.suo
+*.userprefs
+*.csproj.user
+bin/
+obj/
+
+# Build outputs
+**/bin/
+**/obj/
+**/dist/
+**/Debug/
+**/Release/
+
+# Node / Vite
+node_modules/
+**/node_modules/
+**/.vite/
+**/.vite-temp/
+**/.cache/
+pnpm-lock.yaml
+yarn.lock
+package-lock.json
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment in subprojects
+Pim4.Server/.env
+pim4.client/.env*
+!pim4.client/.env.example
+

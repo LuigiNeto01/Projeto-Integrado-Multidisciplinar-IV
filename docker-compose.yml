@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: pim4-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: pim4
+      POSTGRES_USER: pim4
+      POSTGRES_PASSWORD: pim4
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pim4 -d pim4"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
+

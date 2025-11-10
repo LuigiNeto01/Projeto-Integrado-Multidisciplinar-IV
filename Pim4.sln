@@ -1,0 +1,33 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36511.14 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{54A90642-561A-4BB1-A94E-469ADEE60C69}") = "pim4.client", "pim4.client\pim4.client.esproj", "{0A0513B6-A127-1DD2-DE70-06AEF99CD334}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pim4.Server", "Pim4.Server\Pim4.Server.csproj", "{9D17E9E9-B121-4974-B301-B2EEAF591EDD}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{0A0513B6-A127-1DD2-DE70-06AEF99CD334}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0A0513B6-A127-1DD2-DE70-06AEF99CD334}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0A0513B6-A127-1DD2-DE70-06AEF99CD334}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{0A0513B6-A127-1DD2-DE70-06AEF99CD334}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0A0513B6-A127-1DD2-DE70-06AEF99CD334}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0A0513B6-A127-1DD2-DE70-06AEF99CD334}.Release|Any CPU.Deploy.0 = Release|Any CPU
+		{9D17E9E9-B121-4974-B301-B2EEAF591EDD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9D17E9E9-B121-4974-B301-B2EEAF591EDD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9D17E9E9-B121-4974-B301-B2EEAF591EDD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9D17E9E9-B121-4974-B301-B2EEAF591EDD}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {67EF97C1-CBBB-40A1-A000-4298C39DC0DD}
+	EndGlobalSection
+EndGlobal
