@@ -1,19 +1,19 @@
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Npgsql;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using System.Security.Claims;
-using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Pim4.Server.Data;
+using Pim4.Server.Data.Entities;
+using System.Linq;
 
 // UsersController
-// Eu explico: CRUD de usuarios e atualizacao do proprio perfil.
+// Eu explico: CRUD de usuarios e atualizacao do proprio perfil usando Entity Framework.
 // - Todas as rotas exigem autenticacao; a maioria exige papel admin.
 // - GET/POST/PUT/DELETE /users: apenas admin.
 // - PUT /users/me: usuario atualiza nome/email/senha; retorna novo JWT.
-
 namespace Pim4.Server.Controllers
 {
     [ApiController]
@@ -21,6 +21,13 @@ namespace Pim4.Server.Controllers
     [Authorize]
     public class UsersController : ControllerBase
     {
+        private readonly AppDbContext _db;
+
+        public UsersController(AppDbContext db)
+        {
+            _db = db;
+        }
+
         public class UserDto
         {
             public int Id { get; set; }
@@ -114,14 +121,15 @@ namespace Pim4.Server.Controllers
             return roles.Any(r => string.Equals(r, "admin", StringComparison.OrdinalIgnoreCase));
         }
 
-        private static async Task<bool> IsAdmin(ClaimsPrincipal user, NpgsqlConnection conn, string? email)
+        private async Task<bool> IsAdminAsync(ClaimsPrincipal user)
         {
-            // Checa primeiro via Claims do usuário corrente (tolerante a maiúsculas/minúsculas)
             if (HasAdminRole(user)) return true;
+            var email = GetEmail(user);
             if (string.IsNullOrEmpty(email)) return false;
-            await using var cmd = new NpgsqlCommand(Sql.Users.GetCargoByEmail, conn);
-            cmd.Parameters.AddWithValue("@e", email);
-            var cargo = await cmd.ExecuteScalarAsync() as string;
+            var cargo = await _db.Users.AsNoTracking()
+                .Where(u => u.Email == email)
+                .Select(u => u.Cargo)
+                .FirstOrDefaultAsync();
             return string.Equals(cargo, "admin", StringComparison.OrdinalIgnoreCase);
         }
 
@@ -135,31 +143,21 @@ namespace Pim4.Server.Controllers
         [HttpGet]
         public async Task<IActionResult> List()
         {
-            var connString = Environment.GetEnvironmentVariable("POSTGRES_CONNECTION") ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(connString)) return Unauthorized(new { message = "Banco não configurado." });
+            if (!await IsAdminAsync(User)) return Forbid();
 
-            await using var conn = new NpgsqlConnection(connString);
-            await conn.OpenAsync();
-
-            var email = GetEmail(User);
-            if (!await IsAdmin(User, conn, email)) return Forbid();
-
-            var list = new List<UserDto>();
-            await using var cmd = new NpgsqlCommand(Sql.Users.ListAll, conn);
-            await using var r = await cmd.ExecuteReaderAsync();
-            while (await r.ReadAsync())
-            {
-                var dto = new UserDto
+            var list = await _db.Users.AsNoTracking()
+                .OrderByDescending(u => u.Id)
+                .Select(u => new UserDto
                 {
-                    Id = r.GetInt32(r.GetOrdinal("id")),
-                    Cpf = r.IsDBNull(r.GetOrdinal("cpf")) ? "" : r.GetString(r.GetOrdinal("cpf")),
-                    Nome = r.IsDBNull(r.GetOrdinal("nome")) ? "" : r.GetString(r.GetOrdinal("nome")),
-                    Email = r.IsDBNull(r.GetOrdinal("email")) ? "" : r.GetString(r.GetOrdinal("email")),
-                    Cargo = r.IsDBNull(r.GetOrdinal("cargo")) ? "" : r.GetString(r.GetOrdinal("cargo")),
-                    Nivel = r.IsDBNull(r.GetOrdinal("nivel")) ? (int?)null : r.GetInt32(r.GetOrdinal("nivel"))
-                };
-                list.Add(dto);
-            }
+                    Id = u.Id,
+                    Cpf = u.Cpf ?? string.Empty,
+                    Nome = u.Nome ?? string.Empty,
+                    Email = u.Email ?? string.Empty,
+                    Cargo = u.Cargo ?? string.Empty,
+                    Nivel = u.Nivel
+                })
+                .ToListAsync();
+
             return Ok(list);
         }
 
@@ -167,131 +165,96 @@ namespace Pim4.Server.Controllers
         public async Task<IActionResult> Create([FromBody] CreateUserRequest body)
         {
             if (string.IsNullOrWhiteSpace(body.Email) || string.IsNullOrWhiteSpace(body.Nome) || string.IsNullOrWhiteSpace(body.Senha))
-                return BadRequest(new { message = "Nome, email e senha são obrigatórios." });
+                return BadRequest(new { message = "Nome, email e senha sǜo obrigat��rios." });
 
-            var connString = Environment.GetEnvironmentVariable("POSTGRES_CONNECTION") ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(connString)) return Unauthorized(new { message = "Banco não configurado." });
-
-            await using var conn = new NpgsqlConnection(connString);
-            await conn.OpenAsync();
-            var emailReq = GetEmail(User);
-            if (!await IsAdmin(User, conn, emailReq)) return Forbid();
+            if (!await IsAdminAsync(User)) return Forbid();
 
             var hash = Sha256Hex(body.Senha);
             var cargo = body.Cargo ?? "usuario";
-            var nivel = (object?)body.Nivel ?? DBNull.Value;
             var cpf = (body.Cpf ?? string.Empty).Replace(".", "").Replace("-", "");
 
-            await using var cmd = new NpgsqlCommand(Sql.Users.Insert, conn);
-            cmd.Parameters.AddWithValue("@cpf", cpf);
-            cmd.Parameters.AddWithValue("@nome", body.Nome.Trim());
-            cmd.Parameters.AddWithValue("@email", body.Email.Trim());
-            cmd.Parameters.AddWithValue("@senha", hash);
-            cmd.Parameters.AddWithValue("@cargo", cargo);
-            cmd.Parameters.AddWithValue("@nivel", nivel);
-            var newId = await cmd.ExecuteScalarAsync();
-            return Ok(new { id = Convert.ToInt32(newId) });
+            var entity = new User
+            {
+                Cpf = cpf,
+                Nome = body.Nome.Trim(),
+                Email = body.Email.Trim(),
+                Senha = hash,
+                Cargo = cargo,
+                Nivel = body.Nivel
+            };
+
+            _db.Users.Add(entity);
+            await _db.SaveChangesAsync();
+            return Ok(new { id = entity.Id });
         }
 
         [HttpPut("{id:int}")]
         public async Task<IActionResult> Update([FromRoute] int id, [FromBody] UpdateUserRequest body)
         {
-            var connString = Environment.GetEnvironmentVariable("POSTGRES_CONNECTION") ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(connString)) return Unauthorized(new { message = "Banco não configurado." });
+            if (!await IsAdminAsync(User)) return Forbid();
 
-            await using var conn = new NpgsqlConnection(connString);
-            await conn.OpenAsync();
-            var emailReq = GetEmail(User);
-            if (!await IsAdmin(User, conn, emailReq)) return Forbid();
-        
-            var sets = new List<string>();
-            var cmd = new NpgsqlCommand();
-            cmd.Connection = conn;
-            cmd.CommandText = string.Format(Sql.Users.UpdateTemplate, string.Join(", ", sets));
-            cmd.Parameters.AddWithValue("@id", id);
+            var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == id);
+            if (user == null) return Ok(new { updated = 0 });
 
-            if (body.Cpf != null) { sets.Add("cpf=@cpf"); cmd.Parameters.AddWithValue("@cpf", body.Cpf.Replace(".", "").Replace("-", "")); }
-            if (body.Nome != null) { sets.Add("nome=@nome"); cmd.Parameters.AddWithValue("@nome", body.Nome.Trim()); }
-            if (body.Email != null) { sets.Add("email=@email"); cmd.Parameters.AddWithValue("@email", body.Email.Trim()); }
-            if (body.Cargo != null) { sets.Add("cargo=@cargo"); cmd.Parameters.AddWithValue("@cargo", body.Cargo); }
-            if (body.Nivel.HasValue) { sets.Add("nivel=@nivel"); cmd.Parameters.AddWithValue("@nivel", body.Nivel.Value); }
-            if (!string.IsNullOrEmpty(body.Senha)) { sets.Add("senha=@senha"); cmd.Parameters.AddWithValue("@senha", Sha256Hex(body.Senha)); }
+            if (body.Cpf != null) user.Cpf = body.Cpf.Replace(".", "").Replace("-", "");
+            if (body.Nome != null) user.Nome = body.Nome.Trim();
+            if (body.Email != null) user.Email = body.Email.Trim();
+            if (body.Cargo != null) user.Cargo = body.Cargo;
+            if (body.Nivel.HasValue) user.Nivel = body.Nivel;
+            if (!string.IsNullOrEmpty(body.Senha)) user.Senha = Sha256Hex(body.Senha);
 
-            if (sets.Count == 0) return BadRequest(new { message = "Nada para atualizar." });
-            cmd.CommandText = string.Format(Sql.Users.UpdateTemplate, string.Join(", ", sets));
-            var rows = await cmd.ExecuteNonQueryAsync();
+            var rows = await _db.SaveChangesAsync();
             return Ok(new { updated = rows });
         }
 
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete([FromRoute] int id)
         {
-            var connString = Environment.GetEnvironmentVariable("POSTGRES_CONNECTION") ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(connString)) return Unauthorized(new { message = "Banco não configurado." });
+            if (!await IsAdminAsync(User)) return Forbid();
 
-            await using var conn = new NpgsqlConnection(connString);
-            await conn.OpenAsync();
-            var emailReq = User?.Identity?.Name;
-            if (!await IsAdmin(User, conn, emailReq)) return Forbid();
+            var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == id);
+            if (user == null) return Ok(new { deleted = 0 });
 
-            await using var cmd = new NpgsqlCommand(Sql.Users.Delete, conn);
-            cmd.Parameters.AddWithValue("@id", id);
-            var rows = await cmd.ExecuteNonQueryAsync();
+            _db.Users.Remove(user);
+            var rows = await _db.SaveChangesAsync();
             return Ok(new { deleted = rows });
         }
 
-        // Atualiza o próprio perfil (sem exigir admin). Campos permitidos: nome, email, senha
+        // Atualiza o proprio perfil (sem exigir admin). Campos permitidos: nome, email, senha
         [HttpPut("me")]
         public async Task<IActionResult> UpdateMe([FromBody] UpdateMeRequest body)
         {
-            var connString = Environment.GetEnvironmentVariable("POSTGRES_CONNECTION") ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(connString)) return Unauthorized(new { message = "Banco não configurado." });
-
-            await using var conn = new NpgsqlConnection(connString);
-            await conn.OpenAsync();
-
-            // Descobre o id do usuario autenticado
             var myId = GetUserIdFromClaims(User);
             if (myId == null)
             {
                 var emailClaim = GetEmail(User);
-                if (string.IsNullOrEmpty(emailClaim)) return Unauthorized(new { message = "Sessão inválida." });
-            await using var q = new NpgsqlCommand(Sql.Users.GetIdByEmail, conn);
-            q.Parameters.AddWithValue("@e", emailClaim);
-            var obj = await q.ExecuteScalarAsync();
-                if (obj == null) return Unauthorized(new { message = "Usuário não encontrado." });
-                myId = Convert.ToInt32(obj);
+                if (string.IsNullOrEmpty(emailClaim)) return Unauthorized(new { message = "Sessǜo invǭlida." });
+                myId = await _db.Users
+                    .Where(u => u.Email == emailClaim)
+                    .Select(u => (int?)u.Id)
+                    .FirstOrDefaultAsync();
+                if (myId == null) return Unauthorized(new { message = "Usuǭrio nǜo encontrado." });
             }
 
-            var sets = new List<string>();
-            await using var cmd = new NpgsqlCommand();
-            cmd.Connection = conn;
-            cmd.Parameters.AddWithValue("@id", myId.Value);
-            cmd.CommandText = "UPDATE public.\"user\" SET " + string.Join(", ", sets) + " WHERE id=@id";
+            var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == myId.Value);
+            if (user == null) return NotFound(new { message = "Usuǭrio nǜo encontrado." });
 
-            if (!string.IsNullOrWhiteSpace(body.Nome)) { sets.Add("nome=@nome"); cmd.Parameters.AddWithValue("@nome", body.Nome.Trim()); }
-            if (!string.IsNullOrWhiteSpace(body.Email)) { sets.Add("email=@email"); cmd.Parameters.AddWithValue("@email", body.Email.Trim()); }
-            if (!string.IsNullOrEmpty(body.Senha)) { sets.Add("senha=@senha"); cmd.Parameters.AddWithValue("@senha", Sha256Hex(body.Senha)); }
+            if (!string.IsNullOrWhiteSpace(body.Nome)) user.Nome = body.Nome.Trim();
+            if (!string.IsNullOrWhiteSpace(body.Email)) user.Email = body.Email.Trim();
+            if (!string.IsNullOrEmpty(body.Senha)) user.Senha = Sha256Hex(body.Senha);
 
-            if (sets.Count == 0) return BadRequest(new { message = "Nada para atualizar." });
-            cmd.CommandText = "UPDATE public.\"user\" SET " + string.Join(", ", sets) + " WHERE id=@id";
-            var rows = await cmd.ExecuteNonQueryAsync();
-            if (rows <= 0) return NotFound(new { message = "Usuário não encontrado." });
+            var rows = await _db.SaveChangesAsync();
 
-            await using var get = new NpgsqlCommand(Sql.Users.SelectByIdBasic, conn);
-            get.Parameters.AddWithValue("@id", myId.Value);
-            await using var r = await get.ExecuteReaderAsync();
-            if (!await r.ReadAsync()) return NotFound(new { message = "Usuário não encontrado." });
             var dto = new UserDto
             {
-                Id = r.GetInt32(r.GetOrdinal("id")),
-                Cpf = r.IsDBNull(r.GetOrdinal("cpf")) ? "" : r.GetString(r.GetOrdinal("cpf")),
-                Nome = r.IsDBNull(r.GetOrdinal("nome")) ? "" : r.GetString(r.GetOrdinal("nome")),
-                Email = r.IsDBNull(r.GetOrdinal("email")) ? "" : r.GetString(r.GetOrdinal("email")),
-                Cargo = r.IsDBNull(r.GetOrdinal("cargo")) ? "" : r.GetString(r.GetOrdinal("cargo")),
-                Nivel = r.IsDBNull(r.GetOrdinal("nivel")) ? (int?)null : r.GetInt32(r.GetOrdinal("nivel"))
+                Id = user.Id,
+                Cpf = user.Cpf ?? string.Empty,
+                Nome = user.Nome ?? string.Empty,
+                Email = user.Email ?? string.Empty,
+                Cargo = user.Cargo ?? string.Empty,
+                Nivel = user.Nivel
             };
-            // Emite novo token para refletir email/claims atualizados
+
             var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") ?? "dev_super_secret_please_change";
             var issuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? "Pim4";
             var audience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? "Pim4Client";

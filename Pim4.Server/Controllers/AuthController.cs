@@ -1,23 +1,31 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Npgsql;
-using System.Security.Cryptography;
 using Pim4.Server.Data;
+using Pim4.Server.Data.Entities;
 
 // AuthController
 // Eu explico: endpoints de autenticacao da API.
 // - POST /auth/register: cria usuario basico (cargo 'usuario') e retorna JWT.
 // - POST /auth/login: autentica credenciais e emite JWT com claims (email, role, nameid).
-// Notas: chaves JWT e conexao ao banco vem de variaveis de ambiente (.env)
+// Notas: agora usamos Entity Framework (PostgreSQL) em vez de SQL manual.
 namespace Pim4.Server.Controllers
 {
     [ApiController]
     [Route("auth")]
     public class AuthController : ControllerBase
     {
+        private readonly AppDbContext _db;
+
+        public AuthController(AppDbContext db)
+        {
+            _db = db;
+        }
+
         public class LoginRequest
         {
             public string Email { get; set; } = string.Empty;
@@ -44,50 +52,38 @@ namespace Pim4.Server.Controllers
         {
             if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password) || string.IsNullOrWhiteSpace(request.Nome))
             {
-                return BadRequest(new { message = "Nome, e-mail e senha são obrigatórios." });
+                return BadRequest(new { message = "Nome, e-mail e senha sǜo obrigat��rios." });
             }
 
-            var connString = Environment.GetEnvironmentVariable("POSTGRES_CONNECTION") ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(connString))
-            {
-                return Unauthorized(new { message = "Banco não configurado." });
-            }
-
-            await using var conn = new NpgsqlConnection(connString);
-            await conn.OpenAsync();
-
-            // Verifica se email já existe
-            await using (var exists = new NpgsqlCommand(Sql.Auth.ExistsEmail, conn))
-            {
-                exists.Parameters.AddWithValue("@e", request.Email.Trim());
-                var has = await exists.ExecuteScalarAsync();
-                if (has != null) return Conflict(new { message = "E-mail já cadastrado." });
-            }
+            var email = request.Email.Trim();
+            if (await _db.Users.AnyAsync(u => u.Email == email))
+                return Conflict(new { message = "E-mail jǭ cadastrado." });
 
             var cpf = (request.Cpf ?? string.Empty).Replace(".", "").Replace("-", "");
             var hash = Sha256Hex(request.Password);
-            await using (var cmd = new NpgsqlCommand(Sql.Auth.InsertUser, conn))
+            var user = new User
             {
-                cmd.Parameters.AddWithValue("@cpf", cpf);
-                cmd.Parameters.AddWithValue("@nome", request.Nome.Trim());
-                cmd.Parameters.AddWithValue("@email", request.Email.Trim());
-                cmd.Parameters.AddWithValue("@senha", hash);
-                cmd.Parameters.AddWithValue("@cargo", "usuario");
-                cmd.Parameters.AddWithValue("@nivel", DBNull.Value);
-                var newId = await cmd.ExecuteScalarAsync();
+                Cpf = cpf,
+                Nome = request.Nome.Trim(),
+                Email = email,
+                Senha = hash,
+                Cargo = "usuario",
+                Nivel = null
+            };
 
-                // Auto login
-                var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") ?? "dev_super_secret_please_change";
-                var issuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? "Pim4";
-                var audience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? "Pim4Client";
-                var jwt = GenerateJwtToken(jwtSecret, issuer, audience, request.Email.Trim(), Convert.ToInt32(newId), "usuario");
-                return Ok(new LoginResponse
-                {
-                    Token = jwt.token,
-                    ExpiresAt = jwt.expiresAt,
-                    User = new { id = Convert.ToInt32(newId), email = request.Email.Trim(), nome = request.Nome.Trim(), cpf, cargo = "usuario", nivel = (int?)null }
-                });
-            }
+            _db.Users.Add(user);
+            await _db.SaveChangesAsync();
+
+            var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") ?? "dev_super_secret_please_change";
+            var issuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? "Pim4";
+            var audience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? "Pim4Client";
+            var jwt = GenerateJwtToken(jwtSecret, issuer, audience, email, user.Id, "usuario");
+            return Ok(new LoginResponse
+            {
+                Token = jwt.token,
+                ExpiresAt = jwt.expiresAt,
+                User = new { id = user.Id, email, nome = request.Nome.Trim(), cpf, cargo = "usuario", nivel = (int?)null }
+            });
         }
 
         [HttpPost("login")]
@@ -95,7 +91,7 @@ namespace Pim4.Server.Controllers
         {
             if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
             {
-                return BadRequest(new { message = "Credenciais invÃ¡lidas." });
+                return BadRequest(new { message = "Credenciais invǟ��lidas." });
             }
 
             var debug = (Environment.GetEnvironmentVariable("DEBUG_LOGIN") ?? "false").Equals("true", StringComparison.OrdinalIgnoreCase);
@@ -103,82 +99,60 @@ namespace Pim4.Server.Controllers
             var issuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? "Pim4";
             var audience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? "Pim4Client";
 
-            // DEBUG: aceita credenciais padrÃ£o
+            // DEBUG: aceita credenciais padrǟ��o
             if (debug)
             {
                 var dbgEmail = Environment.GetEnvironmentVariable("DEBUG_EMAIL") ?? "admin@demo.com";
                 var dbgPass = Environment.GetEnvironmentVariable("DEBUG_PASSWORD") ?? "admin";
                 if (request.Email.Equals(dbgEmail, StringComparison.OrdinalIgnoreCase) && request.Password == dbgPass)
                 {
-                    var token = GenerateJwtToken(jwtSecret, issuer, audience, request.Email, 0, "admin");
+                    var tokenDbg = GenerateJwtToken(jwtSecret, issuer, audience, request.Email, 0, "admin");
                     return Ok(new LoginResponse
                     {
-                        Token = token.token,
-                        ExpiresAt = token.expiresAt,
+                        Token = tokenDbg.token,
+                        ExpiresAt = tokenDbg.expiresAt,
                         User = new { id = 0, email = request.Email, nome = "Admin", cargo = "admin", nivel = 0 }
                     });
                 }
             }
 
-            // ProduÃ§Ã£o: verificar no PostgreSQL (DB: Pim, tabela: user)
-            var connString = Environment.GetEnvironmentVariable("POSTGRES_CONNECTION") ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(connString))
+            var user = await _db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Email == request.Email);
+            if (user == null)
             {
-                // Sem DB: negar
-                return Unauthorized(new { message = "Banco não configurado." });
+                return Unauthorized(new { message = "Credenciais invǭlidas." });
             }
 
-            await using var conn = new NpgsqlConnection(connString);
-            await conn.OpenAsync();
-
-            await using var cmd = new NpgsqlCommand(Sql.Auth.SelectUserByEmail, conn);
-            cmd.Parameters.AddWithValue("@e", request.Email);
-            await using var reader = await cmd.ExecuteReaderAsync();
-
-            if (!await reader.ReadAsync())
-            {
-                return Unauthorized(new { message = "Credenciais inválidas." });
-            }
-
-            var id = reader.GetInt32(reader.GetOrdinal("id"));
-            var email = reader.GetString(reader.GetOrdinal("email"));
-            var nome = reader.IsDBNull(reader.GetOrdinal("nome")) ? "" : reader.GetString(reader.GetOrdinal("nome"));
-            var senha = reader.IsDBNull(reader.GetOrdinal("senha")) ? null : reader.GetString(reader.GetOrdinal("senha"));
-            var cargo = reader.IsDBNull(reader.GetOrdinal("cargo")) ? "" : reader.GetString(reader.GetOrdinal("cargo"));
-            int nivel = 0;
-            if (!reader.IsDBNull(reader.GetOrdinal("nivel")))
-            {
-                // suporta smallint/int
-                try { nivel = reader.GetInt32(reader.GetOrdinal("nivel")); }
-                catch { nivel = reader.GetInt16(reader.GetOrdinal("nivel")); }
-            }
-            var cpf = reader.IsDBNull(reader.GetOrdinal("cpf")) ? "" : reader.GetString(reader.GetOrdinal("cpf"));
-
-            // VerificaÃ§Ã£o com hash SHA-256 (hex) conforme projeto anterior
             var ok = false;
-            if (!string.IsNullOrEmpty(senha))
+            if (!string.IsNullOrEmpty(user.Senha))
             {
                 var hashInput = Sha256Hex(request.Password);
-                // compara ignorando caixa
-                ok = string.Equals(senha, hashInput, StringComparison.OrdinalIgnoreCase);
+                ok = string.Equals(user.Senha, hashInput, StringComparison.OrdinalIgnoreCase);
             }
             if (!ok)
             {
-                return Unauthorized(new { message = "Credenciais inválidas." });
+                return Unauthorized(new { message = "Credenciais invǭlidas." });
             }
 
-            var jwt = GenerateJwtToken(jwtSecret, issuer, audience, email, id, cargo);
+            var token = GenerateJwtToken(jwtSecret, issuer, audience, user.Email, user.Id, user.Cargo);
             return Ok(new LoginResponse
             {
-                Token = jwt.token,
-                ExpiresAt = jwt.expiresAt,
-                User = new { id, email, nome, cpf, cargo, nivel }
+                Token = token.token,
+                ExpiresAt = token.expiresAt,
+                User = new
+                {
+                    id = user.Id,
+                    email = user.Email,
+                    nome = user.Nome ?? string.Empty,
+                    cpf = user.Cpf ?? string.Empty,
+                    cargo = user.Cargo ?? string.Empty,
+                    nivel = user.Nivel
+                }
             });
         }
 
         private static (string token, DateTime expiresAt) GenerateJwtToken(string secret, string issuer, string audience, string email, int userId, string cargo)
         {
-            // Usa a mesma derivaÃ§Ã£o de chave do Program.cs: se o segredo tiver menos de 32 bytes,
+            // Usa a mesma derivaǟ��ǟ��o de chave do Program.cs: se o segredo tiver menos de 32 bytes,
             // aplica SHA-256 para garantir 256 bits para HS256.
             byte[] keyBytes = Encoding.UTF8.GetBytes(secret);
             if (keyBytes.Length < 32)
@@ -221,7 +195,3 @@ namespace Pim4.Server.Controllers
         }
     }
 }
-
-
-
-

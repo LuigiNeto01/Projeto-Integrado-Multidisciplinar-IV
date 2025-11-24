@@ -72,7 +72,7 @@ namespace Pim4.Server.Controllers
             return s.Length <= max ? s : s.Substring(0, max);
         }
 
-        private static string BuildFallback(ChamadoInfo b)
+        private static string BuildFallback(ChamadoInfo? b)
         {
             string nome = b?.Nome ?? "";
             string titulo = b?.Titulo ?? "";
