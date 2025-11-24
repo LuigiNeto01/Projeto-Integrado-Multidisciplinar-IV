@@ -5,6 +5,8 @@ using DotNetEnv;
 using System.Security.Cryptography;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
+using Pim4.Server.Data;
 
 // Load .env early if present
 // Carrego variaveis do .env logo no inicio (nao quebra se ausente)
@@ -18,6 +20,17 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddAuthorization();
 builder.Services.AddHttpClient<Pim4.Server.Services.GeminiService>();
+
+var connString = Environment.GetEnvironmentVariable("POSTGRES_CONNECTION")
+    ?? builder.Configuration.GetConnectionString("Postgres");
+if (string.IsNullOrWhiteSpace(connString))
+{
+    throw new InvalidOperationException("POSTGRES_CONNECTION nao configurada.");
+}
+builder.Services.AddDbContext<AppDbContext>(options =>
+{
+    options.UseNpgsql(connString);
+});
 
 // CORS for local Vite dev
 // CORS amigavel p/ desenvolvimento (Vite/localhost)
