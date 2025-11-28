@@ -1,21 +1,54 @@
+version: "3.9"
+
 services:
   postgres:
     image: postgres:15-alpine
     container_name: pim4-postgres
     restart: unless-stopped
+    env_file:
+      - .env.prod
     environment:
-      POSTGRES_DB: pim4
-      POSTGRES_USER: pim4
-      POSTGRES_PASSWORD: pim4
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pim4 -d pim4"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Pim4.Server/Dockerfile
+    env_file:
+      - .env.prod
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      POSTGRES_CONNECTION: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};
+      DISABLE_HTTPS_REDIRECT: "true"
+    depends_on:
+      - postgres
+    ports:
+      - "5132:8080"
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: pim4.client/Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+    restart: unless-stopped
 
 volumes:
   pgdata:

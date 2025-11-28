@@ -1,0 +1,11 @@
+**/bin
+**/obj
+**/node_modules
+.git
+*.user
+*.swp
+*.suo
+*.DS_Store
+*.env.local
+*.env
+*.env.*.local
