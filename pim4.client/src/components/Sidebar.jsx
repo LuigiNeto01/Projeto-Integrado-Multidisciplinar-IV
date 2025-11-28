@@ -15,7 +15,7 @@ import {
 import { useAuth } from '@/services/auth/AuthContext'
 import ProfileModal from '@/components/ProfileModal'
 import { updateMe } from '@/services/profile/api'
-import logo from '@/assets/logo.png'
+import logo from '@/assets/Logo.png'
 
 // Sidebar: responsável por navegação lateral, itens de menu e ações do usuário.
 // Observação: os itens exibidos vêm do componente pai (Home) conforme a role.
