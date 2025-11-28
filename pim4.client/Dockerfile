@@ -1,9 +1,9 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 
-# Instala dependências
+# Instala dependências (usa lock se existir)
 COPY pim4.client/package.json pim4.client/package-lock.json ./
-RUN npm ci
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
 # Copia código e injeta variável de build do backend
 COPY pim4.client/ .
