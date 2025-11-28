@@ -2,7 +2,7 @@ FROM node:20-alpine AS build
 WORKDIR /app
 
 # Instala dependências
-COPY pim4.client/package*.json ./
+COPY pim4.client/package.json pim4.client/package-lock.json ./
 RUN npm ci
 
 # Copia código e injeta variável de build do backend
