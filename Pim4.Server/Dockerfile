@@ -1,6 +1,13 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
+# Node é necessário por causa do SpaProxy/JavaScript SDK referenciado no csproj
+RUN apt-get update \
+    && apt-get install -y curl ca-certificates \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
 # Restaura apenas os projetos necessários para cache eficiente
 COPY Pim4.Server/Pim4.Server.csproj Pim4.Server/
 COPY pim4.client/pim4.client.esproj pim4.client/
