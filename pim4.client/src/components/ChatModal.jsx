@@ -1,5 +1,5 @@
 // ChatModal
-// Eu explico: este modal mostra a conversa do chamado selecionado.
+// este modal mostra a conversa do chamado selecionado.
 // - Busca mensagens a cada 3s (polling simples).
 // - Permite enviar quando o chamado está aberto.
 // - Para suporte/admin, permite fechar/reabrir o chamado.

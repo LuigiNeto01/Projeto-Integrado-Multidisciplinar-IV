@@ -1,5 +1,5 @@
 // LoginDesktop
-// Eu explico: layout desktop para a tela de login (duas colunas),
+// layout desktop para a tela de login (duas colunas),
 // renderiza o LoginForm na coluna da direita.
 import ilustration from '@/assets/login_one.jpg'
 import LoginForm from '@/components/LoginForm'

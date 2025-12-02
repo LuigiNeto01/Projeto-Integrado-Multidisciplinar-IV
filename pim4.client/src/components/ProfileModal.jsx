@@ -1,5 +1,5 @@
 // ProfileModal
-// Eu explico: modal para o usuário editar dados básicos (nome, email, senha).
+// modal para o usuário editar dados básicos (nome, email, senha).
 // Campos de CPF/cargo/nível aparecem como somente leitura.
 import { useEffect, useState } from 'react'
 import { HiOutlineXMark } from 'react-icons/hi2'

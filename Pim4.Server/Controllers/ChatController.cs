@@ -8,7 +8,7 @@ using Pim4.Server.Data.Entities;
 using System.Linq;
 
 // ChatController
-// Eu explico: mensagens de chat por chamado usando Entity Framework.
+// mensagens de chat por chamado usando Entity Framework.
 // - GET /chat/{chamadoId}/messages: lista mensagens (join com usuario p/ nome).
 // - POST /chat/{chamadoId}/messages: envia mensagem como usuario autenticado.
 namespace Pim4.Server.Controllers
@@ -87,7 +87,7 @@ namespace Pim4.Server.Controllers
             if (string.IsNullOrWhiteSpace(body.Mensagem)) return BadRequest(new { message = "Mensagem vazia." });
 
             var userId = await GetCurrentUserIdAsync();
-            if (userId is null) return Unauthorized(new { message = "Sessǜo invǭlida." });
+            if (userId is null) return Unauthorized(new { message = "Sessão inválida." });
 
             var message = new ChatMessage
             {

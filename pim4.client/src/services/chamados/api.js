@@ -1,5 +1,5 @@
 // Serviço de chamados (frontend)
-// Eu explico: centralizo as requisições da SPA relacionadas a chamados.
+// centralizo as requisições da SPA relacionadas a chamados.
 import { apiFetch } from '@/services/api/http'
 
 export async function listarChamados() {

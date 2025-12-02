@@ -9,7 +9,7 @@ using Pim4.Server.Data;
 using Pim4.Server.Data.Entities;
 
 // AuthController
-// Eu explico: endpoints de autenticacao da API.
+// endpoints de autenticacao da API.
 // - POST /auth/register: cria usuario basico (cargo 'usuario') e retorna JWT.
 // - POST /auth/login: autentica credenciais e emite JWT com claims (email, role, nameid).
 // Notas: agora usamos Entity Framework (PostgreSQL) em vez de SQL manual.
@@ -52,12 +52,12 @@ namespace Pim4.Server.Controllers
         {
             if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password) || string.IsNullOrWhiteSpace(request.Nome))
             {
-                return BadRequest(new { message = "Nome, e-mail e senha sǜo obrigat��rios." });
+                return BadRequest(new { message = "Nome, e-mail e senha são obrigatórios." });
             }
 
             var email = request.Email.Trim();
             if (await _db.Users.AnyAsync(u => u.Email == email))
-                return Conflict(new { message = "E-mail jǭ cadastrado." });
+                return Conflict(new { message = "E-mail ja cadastrado." });
 
             var cpf = (request.Cpf ?? string.Empty).Replace(".", "").Replace("-", "");
             var hash = Sha256Hex(request.Password);
@@ -91,7 +91,7 @@ namespace Pim4.Server.Controllers
         {
             if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
             {
-                return BadRequest(new { message = "Credenciais invǟ��lidas." });
+                return BadRequest(new { message = "Credenciais invalidas." });
             }
 
             var debug = (Environment.GetEnvironmentVariable("DEBUG_LOGIN") ?? "false").Equals("true", StringComparison.OrdinalIgnoreCase);
@@ -99,7 +99,7 @@ namespace Pim4.Server.Controllers
             var issuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? "Pim4";
             var audience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? "Pim4Client";
 
-            // DEBUG: aceita credenciais padrǟ��o
+            // DEBUG: aceita credenciais padrao
             if (debug)
             {
                 var dbgEmail = Environment.GetEnvironmentVariable("DEBUG_EMAIL") ?? "admin@demo.com";
@@ -119,7 +119,7 @@ namespace Pim4.Server.Controllers
             var user = await _db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Email == request.Email);
             if (user == null)
             {
-                return Unauthorized(new { message = "Credenciais invǭlidas." });
+                return Unauthorized(new { message = "Credenciais invalidas." });
             }
 
             var ok = false;
@@ -130,7 +130,7 @@ namespace Pim4.Server.Controllers
             }
             if (!ok)
             {
-                return Unauthorized(new { message = "Credenciais invǭlidas." });
+                return Unauthorized(new { message = "Credenciais invalidas." });
             }
 
             var token = GenerateJwtToken(jwtSecret, issuer, audience, user.Email, user.Id, user.Cargo);
@@ -152,7 +152,7 @@ namespace Pim4.Server.Controllers
 
         private static (string token, DateTime expiresAt) GenerateJwtToken(string secret, string issuer, string audience, string email, int userId, string cargo)
         {
-            // Usa a mesma derivaǟ��ǟ��o de chave do Program.cs: se o segredo tiver menos de 32 bytes,
+            // Usa a mesma derivacao de chave do Program.cs: se o segredo tiver menos de 32 bytes,
             // aplica SHA-256 para garantir 256 bits para HS256.
             byte[] keyBytes = Encoding.UTF8.GetBytes(secret);
             if (keyBytes.Length < 32)

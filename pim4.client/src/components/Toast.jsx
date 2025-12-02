@@ -1,5 +1,5 @@
 // Toast — componente de notificações simples baseado em eventos do window
-// Eu explico: para mostrar toasts de qualquer lugar sem prop drilling, dispare:
+// para mostrar toasts de qualquer lugar sem prop drilling, dispare:
 // window.dispatchEvent(new CustomEvent('toast:show', { detail: { type: 'success'|'error'|'info', message: 'texto', duration: 3000 }}))
 import { useEffect, useRef, useState } from 'react'
 

@@ -1,5 +1,5 @@
 // ChamadosGrid
-// Eu explico: lista os chamados do usuário (ou todos, se admin) com:
+// lista os chamados do usuário (ou todos, se admin) com:
 // - Cards de indicadores (abertos, críticos, fechados)
 // - Filtros (quem abriu, prioridade, busca)
 // - Grade de abertos e, abaixo, divisória com fechados

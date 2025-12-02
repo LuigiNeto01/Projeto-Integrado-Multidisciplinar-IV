@@ -10,7 +10,7 @@ using Pim4.Server.Data.Entities;
 using System.Linq;
 
 // UsersController
-// Eu explico: CRUD de usuarios e atualizacao do proprio perfil usando Entity Framework.
+// CRUD de usuarios e atualizacao do proprio perfil usando Entity Framework.
 // - Todas as rotas exigem autenticacao; a maioria exige papel admin.
 // - GET/POST/PUT/DELETE /users: apenas admin.
 // - PUT /users/me: usuario atualiza nome/email/senha; retorna novo JWT.
@@ -165,7 +165,7 @@ namespace Pim4.Server.Controllers
         public async Task<IActionResult> Create([FromBody] CreateUserRequest body)
         {
             if (string.IsNullOrWhiteSpace(body.Email) || string.IsNullOrWhiteSpace(body.Nome) || string.IsNullOrWhiteSpace(body.Senha))
-                return BadRequest(new { message = "Nome, email e senha sǜo obrigat��rios." });
+                return BadRequest(new { message = "Nome, email e senha são obrigatórios." });
 
             if (!await IsAdminAsync(User)) return Forbid();
 
@@ -228,17 +228,16 @@ namespace Pim4.Server.Controllers
             if (myId == null)
             {
                 var emailClaim = GetEmail(User);
-                if (string.IsNullOrEmpty(emailClaim)) return Unauthorized(new { message = "Sessǜo invǭlida." });
+                if (string.IsNullOrEmpty(emailClaim)) return Unauthorized(new { message = "Sessao invalida." });
                 myId = await _db.Users
                     .Where(u => u.Email == emailClaim)
                     .Select(u => (int?)u.Id)
                     .FirstOrDefaultAsync();
-                if (myId == null) return Unauthorized(new { message = "Usuǭrio nǜo encontrado." });
+                if (myId == null) return Unauthorized(new { message = "Usuario nao encontrado." });
             }
 
             var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == myId.Value);
-            if (user == null) return NotFound(new { message = "Usuǭrio nǜo encontrado." });
-
+            if (user == null) return NotFound(new { message = "Usuario nao encontrado." });
             if (!string.IsNullOrWhiteSpace(body.Nome)) user.Nome = body.Nome.Trim();
             if (!string.IsNullOrWhiteSpace(body.Email)) user.Email = body.Email.Trim();
             if (!string.IsNullOrEmpty(body.Senha)) user.Senha = Sha256Hex(body.Senha);

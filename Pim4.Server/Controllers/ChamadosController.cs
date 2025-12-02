@@ -8,7 +8,7 @@ using Pim4.Server.Data.Entities;
 using System.Linq;
 
 // ChamadosController
-// Eu explico: operacoes de chamados (listar/criar) agora via Entity Framework.
+// operacoes de chamados (listar/criar) agora via Entity Framework.
 // - GET /chamados: lista conforme cargo (usuario ve os seus; suporte/admin veem mais).
 // - POST /chamados: cria um chamado; prioridade pode ser mapeada por motivo.
 // - PUT /chamados/{id}/close|reopen: alterna status resolvido.
@@ -82,7 +82,7 @@ namespace Pim4.Server.Controllers
             {
                 "problemas com o mouse" => 3,
                 "problemas com som" => 4,
-                "problema com v��deo" => 2,
+                "problema com video" => 2,
                 "problemas com a internet" => 1,
                 _ => 4,
             };
@@ -92,7 +92,7 @@ namespace Pim4.Server.Controllers
         public async Task<IActionResult> Listar()
         {
             var (userId, cargo, nivel) = await GetCurrentUserAsync();
-            if (userId is null) return Unauthorized(new { message = "Usuǭrio nǜo encontrado." });
+            if (userId is null) return Unauthorized(new { message = "Usuário nao encontrado." });
 
             var query = _db.Chamados
                 .AsNoTracking()
@@ -131,10 +131,10 @@ namespace Pim4.Server.Controllers
         public async Task<IActionResult> Criar([FromBody] CriarChamadoRequest req)
         {
             if (string.IsNullOrWhiteSpace(req.Titulo) || string.IsNullOrWhiteSpace(req.Motivo))
-                return BadRequest(new { message = "T��tulo e Motivo sǜo obrigat��rios." });
+                return BadRequest(new { message = "Título e Motivo são obrigatórios." });
 
             var (userId, cargo, nivel) = await GetCurrentUserAsync();
-            if (userId is null) return Unauthorized(new { message = "Usuǭrio nǜo encontrado." });
+            if (userId is null) return Unauthorized(new { message = "Usuário não encontrado." });
 
             var prioridade = ResolvePrioridade(req);
 
@@ -158,7 +158,7 @@ namespace Pim4.Server.Controllers
         public async Task<IActionResult> ListarPorUsuario([FromBody] ChamadoQuery queryBody)
         {
             var (userId, cargo, nivel) = await GetCurrentUserAsync();
-            if (userId is null) return Unauthorized(new { message = "Usuǭrio nǜo encontrado." });
+            if (userId is null) return Unauthorized(new { message = "Usuário nao encontrado." });
 
             var requestedUserId = queryBody?.UserId ?? userId;
             var isUsuario = string.Equals(cargo, "usuario", StringComparison.OrdinalIgnoreCase);

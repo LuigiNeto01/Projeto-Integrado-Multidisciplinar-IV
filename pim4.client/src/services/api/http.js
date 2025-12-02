@@ -1,5 +1,5 @@
 // http.js — camada fina para requisições REST da SPA
-// Eu explico: centraliza a montagem de headers, baseURL e token (JWT)
+// centraliza a montagem de headers, baseURL e token (JWT)
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 const TOKEN_KEY = 'auth_token'
 

@@ -1,5 +1,5 @@
 // LoginMobile
-// Eu explico: layout compacto (mobile) para o LoginForm.
+// layout compacto (mobile) para o LoginForm.
 import LoginForm from '@/components/LoginForm'
 
 export default function LoginMobile() {

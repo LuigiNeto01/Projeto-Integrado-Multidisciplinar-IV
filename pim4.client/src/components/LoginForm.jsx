@@ -1,5 +1,5 @@
 // LoginForm
-// Eu explico: formulário de autenticação com botão para abrir o modal de registro.
+// formulário de autenticação com botão para abrir o modal de registro.
 // - login(email, password) vem do AuthContext e salva token/usuário.
 // - registro chama /auth/register e, com sucesso, navega para a Home.
 import { useState } from 'react'

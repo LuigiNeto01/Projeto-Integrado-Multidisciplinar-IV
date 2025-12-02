@@ -1,5 +1,5 @@
 // AuthContext
-// Eu explico: provê sessão (usuário/token) e helpers (login, logout, updateUser, renewSession)
+// provê sessão (usuário/token) e helpers (login, logout, updateUser, renewSession)
 // para toda a aplicação React.
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { clearToken, getToken, setToken } from '@/services/api/http'

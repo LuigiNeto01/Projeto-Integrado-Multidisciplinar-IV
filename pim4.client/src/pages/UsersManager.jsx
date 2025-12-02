@@ -1,5 +1,5 @@
 // UsersManager
-// Eu explico: tela de administração de usuários (somente para admin).
+// tela de administração de usuários (somente para admin).
 // - Carrega a lista do backend, permite criar/editar/excluir.
 // - Usa o UserModal para o formulário de criação/edição.
 import { useEffect, useState } from 'react'

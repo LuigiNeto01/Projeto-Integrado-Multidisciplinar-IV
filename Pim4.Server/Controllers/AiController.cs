@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Pim4.Server.Services;
 
 // AiController
-// Eu explico: gera texto curto de confirmacao/FAQ para abertura de chamado.
+// gera texto curto de confirmacao/FAQ para abertura de chamado.
 // - POST /ai/chamado/opiniao: carrega prompt do arquivo, substitui placeholders
 //   e opcionalmente envia ao Gemini. Se falhar ou sem chave, usa fallback.
 

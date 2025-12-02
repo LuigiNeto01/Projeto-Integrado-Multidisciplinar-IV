@@ -1,5 +1,5 @@
 // AbrirChamadoModal
-// Eu explico: este modal abre um novo chamado.
+// este modal abre um novo chamado.
 // Fluxo:
 // 1) Usuário preenche título/motivo (e prioridade/descrição se "Outros").
 // 2) Antes de criar, peço a opinião/FAQ da IA (endpoint /ai/chamado/opiniao).

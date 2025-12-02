@@ -1,5 +1,5 @@
 // Home
-// Eu explico: shell principal que organiza a sidebar e a área de conteúdo.
+// shell principal que organiza a sidebar e a área de conteúdo.
 // - Alterno entre Dashboard, Chamados e (se admin) Usuários.
 import { useState } from 'react'
 import Sidebar from '@/components/Sidebar'

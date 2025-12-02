@@ -1,5 +1,5 @@
 // Serviço de usuários (frontend)
-// Eu explico: aqui concentro as chamadas para o backend relacionadas a usuários.
+// aqui concentro as chamadas para o backend relacionadas a usuários.
 import { apiFetch } from '@/services/api/http'
 
 export function listUsers() {

@@ -1,5 +1,5 @@
 // UserModal: modal do painel admin para criar/editar usuários.
-// Eu explico: senha é opcional quando em edição; para cargo "Suporte" o nível é obrigatório.
+// senha é opcional quando em edição; para cargo "Suporte" o nível é obrigatório.
 import { useEffect, useState } from 'react'
 import { HiOutlineXMark } from 'react-icons/hi2'
 

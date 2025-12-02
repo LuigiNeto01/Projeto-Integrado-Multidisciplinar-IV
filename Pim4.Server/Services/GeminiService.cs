@@ -1,7 +1,7 @@
 using System.Net.Http.Json;
 
 // GeminiService
-// Eu explico: cliente HTTP minimalista para a API do Google Generative Language (Gemini).
+// cliente HTTP minimalista para a API do Google Generative Language (Gemini).
 // - Le credenciais e modelo de variaveis de ambiente/Configuration.
 // - Envia prompt como 'contents.parts[].text' e retorna primeiro trecho de texto.
 namespace Pim4.Server.Services
